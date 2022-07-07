@@ -6,10 +6,17 @@ This package aim at providing Pareto front using the Kirlik and Sayin approach f
 
 
 ### Usage:
+This package is not registered and should be added via
+```julia
+]add git@github.com:remi-garcia/KirlikSayin.jl.git
+```
+
 ```julia
 get_pareto_front(model, expressions_objective_functions)
 ```
 where `model` is a JuMP model and `expressions_objective_functions` is a `Vector{X} where X <: AbstractJuMPScalar` for the multiple objective functions.
+
+See `examples/basicvopt.jl` for a simple example.
 
 
 
