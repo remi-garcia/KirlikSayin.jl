@@ -1,0 +1,8 @@
+name = "KirlikSayin"
+uuid = "85ae3908-9554-4884-affc-e3ac3bc8b682"
+authors = ["Rémi Garcia"]
+version = "0.1.0"
+
+[deps]
+JuMP = "4076af6c-e467-56ae-b986-b466b2749572"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
