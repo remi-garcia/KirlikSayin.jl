@@ -75,7 +75,7 @@ function cleanup_model!(model::Model)
 end
 
 
-function solveModel(model::Model, ub::MVector{N, Int})::Union{Nothing, MVector{N, Int}} where N
+function solveModel(model::Model, ub::MVector{N, Int}; without_weakly_dominated::Bool=true)::Union{Nothing, MVector{N, Int}} where N
     kirliksayin_objective_functions = model[:kirliksayin_objective_functions]
 
     @objective(model, Min, kirliksayin_objective_functions[1])
@@ -87,24 +87,28 @@ function solveModel(model::Model, ub::MVector{N, Int})::Union{Nothing, MVector{N
         return nothing
     end
 
-    new_obj_value = round(Int, objective_value(model))
-    @objective(model, Min, sum(kirliksayin_objective_functions[2:end]))
-    @constraint(model, kirliksayin_objective_functions_equal, kirliksayin_objective_functions[1] == new_obj_value)
-    optimize!(model)
-    if termination_status(model) != OPTIMAL
-        delete.(model, kirliksayin_objective_functions_eps)
-        delete.(model, kirliksayin_objective_functions_equal)
-        unregister(model, :kirliksayin_objective_functions_eps)
-        unregister(model, :kirliksayin_objective_functions_equal)
-        return nothing
+    if without_weakly_dominated
+        new_obj_value = round(Int, objective_value(model))
+        @objective(model, Min, sum(kirliksayin_objective_functions[2:end]))
+        @constraint(model, kirliksayin_objective_functions_equal, kirliksayin_objective_functions[1] == new_obj_value)
+        optimize!(model)
+        if termination_status(model) != OPTIMAL
+            delete.(model, kirliksayin_objective_functions_eps)
+            delete.(model, kirliksayin_objective_functions_equal)
+            unregister(model, :kirliksayin_objective_functions_eps)
+            unregister(model, :kirliksayin_objective_functions_equal)
+            return nothing
+        end
     end
 
     objective_functions_values = MVector{N, Int}(round.(Int, value.(kirliksayin_objective_functions)))
 
     delete.(model, kirliksayin_objective_functions_eps)
-    delete.(model, kirliksayin_objective_functions_equal)
     unregister(model, :kirliksayin_objective_functions_eps)
-    unregister(model, :kirliksayin_objective_functions_equal)
+    if without_weakly_dominated
+        delete.(model, kirliksayin_objective_functions_equal)
+        unregister(model, :kirliksayin_objective_functions_equal)
+    end
 
     return objective_functions_values
 end
@@ -155,7 +159,7 @@ end
 
 
 
-function get_pareto_front(model::Model, objective_functions::Vector{X}) where X <: AbstractJuMPScalar
+function get_pareto_front(model::Model, objective_functions::Vector{X}; without_weakly_dominated::Bool=true) where X <: AbstractJuMPScalar
     N = length(objective_functions)
     # Adjust model to add variables for objective functions
     adjust_model!(model, objective_functions)
@@ -166,7 +170,7 @@ function get_pareto_front(model::Model, objective_functions::Vector{X}) where X 
     while !isempty(L)
         Ri = rargmax(L, lb)
         ui = upper_corner(Ri)
-        fxstar::Union{Nothing, MVector{N, Int}} = solveModel(model, ui)
+        fxstar::Union{Nothing, MVector{N, Int}} = solveModel(model, ui, without_weakly_dominated=without_weakly_dominated)
         if !isnothing(fxstar)
             if !(fxstar in Yn)
                 push!(Yn, fxstar)
